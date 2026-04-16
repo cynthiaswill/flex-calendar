@@ -31,6 +31,10 @@ function save(d: HoursData) {
   fs.writeFileSync(FILE, JSON.stringify(d, null, 2));
 }
 
+function toLocalDate(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 // =====================
 function addDays(base: Date, n: number) {
   const d = new Date(base);
@@ -39,11 +43,15 @@ function addDays(base: Date, n: number) {
 }
 
 function fmt(d: Date) {
-  return d.toISOString().split("T")[0];
+  const local = toLocalDate(d);
+  const year = local.getFullYear();
+  const month = String(local.getMonth() + 1).padStart(2, "0");
+  const day = String(local.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function dayName(d: Date) {
-  return d.toLocaleDateString("en-GB", { weekday: "short" });
+  return toLocalDate(d).toLocaleDateString("en-GB", { weekday: "short" });
 }
 
 // =====================
@@ -84,7 +92,9 @@ async function handleDay(rl: readline.Interface, data: HoursData, d: Date) {
 
 // =====================
 function fmtDateCell(d: Date, today: Date) {
-  const diff = Math.floor((d.getTime() - today.getTime()) / 86400000);
+  const diff = Math.floor(
+    (toLocalDate(d).getTime() - toLocalDate(today).getTime()) / 86400000
+  );
 
   const base = fmt(d).padEnd(10);
 
@@ -94,7 +104,9 @@ function fmtDateCell(d: Date, today: Date) {
 }
 
 function fmtDayCell(d: Date, today: Date) {
-  const diff = Math.floor((d.getTime() - today.getTime()) / 86400000);
+  const diff = Math.floor(
+    (toLocalDate(d).getTime() - toLocalDate(today).getTime()) / 86400000
+  );
 
   const base = dayName(d).padEnd(10);
 
@@ -199,7 +211,7 @@ async function main() {
     let remaining = "-".padStart(11);
 
     const isTuesday = dayName(d) === "Tue";
-    const isPast = d.getTime() < today.getTime();
+    const isPast = toLocalDate(d).getTime() < today.getTime();
     const isToday = fmt(d) === fmt(today);
 
     if (isTuesday && !isPast) {
