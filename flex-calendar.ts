@@ -175,8 +175,12 @@ async function main() {
   // OUTPUT (ALWAYS GUARANTEED)
   // =====================
   console.log("\n📊 CALENDAR\n");
-  console.log("Date       | Day        | Spent | Available | 7-Day Total");
-  console.log("----------------------------------------------------------");
+  console.log(
+    "Date       | Day        | Spent  | Available | 7-Day Total | 7-Day Remaining"
+  );
+  console.log(
+    "-----------------------------------------------------------------------------"
+  );
 
   const todayIndex = 6;
 
@@ -192,6 +196,7 @@ async function main() {
       i >= todayIndex ? fmtAvail(available(data, finalDates, i)) : "-".padStart(9);
 
     let rolling = "-".padStart(11);
+    let remaining = "-".padStart(11);
 
     const isTuesday = dayName(d) === "Tue";
     const isPast = d.getTime() < today.getTime();
@@ -199,10 +204,11 @@ async function main() {
 
     if (isTuesday && !isPast) {
       rolling = rolling7(data, finalDates, i).toFixed(1).padStart(11);
+      remaining = (24 - parseFloat(rolling)).toFixed(1).padStart(11);
     }
 
     console.log(
-      `${dateCell} | ${dayCell} | ${spent.toFixed(1).padStart(6)} | ${avail} | ${rolling}`
+      `${dateCell} | ${dayCell} | ${spent.toFixed(1).padStart(6)} | ${avail} | ${rolling} | ${remaining}`
     );
   }
 
