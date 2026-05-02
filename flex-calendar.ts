@@ -69,15 +69,12 @@ function available(data: HoursData, dates: Date[], i: number) {
 
   let worstCase = 0;
 
-  // Check ALL 7-day windows that include day i
   for (let start = i - 6; start <= i; start++) {
     let sum = 0;
 
     for (let k = 0; k < 7; k++) {
       const idx = start + k;
-
       if (idx < 0 || idx >= dates.length) continue;
-
       sum += data[fmt(dates[idx])] ?? 0;
     }
 
@@ -97,13 +94,12 @@ async function handleDay(rl: readline.Interface, data: HoursData, d: Date) {
 
   if (data[key] !== undefined) {
     const ans = await ask(rl, `${key} (${label}) has ${data[key]}h — change? (y/n): `);
-
     if (ans.toLowerCase() !== "y") return;
   }
 
   const input = await ask(rl, `Enter hours for ${key} (${label}) (max 8): `);
-
   const h = parseFloat(input);
+
   if (!isNaN(h)) data[key] = Math.min(h, MAX_DAY);
 }
 
@@ -148,8 +144,6 @@ async function main() {
   const today = new Date();
 
   // =====================
-  // BUILD BASE + OPTIONAL EXTENSION SEPARATELY
-  // =====================
   const baseDates: Date[] = [];
   for (let i = -6; i <= 7; i++) {
     baseDates.push(addDays(today, i));
@@ -158,50 +152,54 @@ async function main() {
   console.log("\n📅 FLEX CALENDAR\n");
 
   // =====================
-  // INPUT BASE RANGE ONLY
+  // NEW MASTER PROMPT
   // =====================
-  const full = baseDates.every((d) => data[fmt(d)] !== undefined);
+  const doInput = await ask(rl, "Do you want to input or update hours? (y/n): ");
 
-  if (full) {
-    const ans = await ask(rl, "All 14 days filled. Change today + next 7 days? (y/n): ");
+  let finalDates = [...baseDates];
 
-    if (ans.toLowerCase() === "y") {
+  if (doInput.toLowerCase() === "y") {
+    const full = baseDates.every((d) => data[fmt(d)] !== undefined);
+
+    if (full) {
+      const ans = await ask(
+        rl,
+        "All 14 days filled. Change today + next 7 days? (y/n): "
+      );
+
+      if (ans.toLowerCase() === "y") {
+        for (let i = 6; i < baseDates.length; i++) {
+          await handleDay(rl, data, baseDates[i]);
+        }
+      }
+    } else {
       for (let i = 6; i < baseDates.length; i++) {
         await handleDay(rl, data, baseDates[i]);
       }
     }
-  } else {
-    for (let i = 6; i < baseDates.length; i++) {
-      await handleDay(rl, data, baseDates[i]);
+
+    const extend = await ask(
+      rl,
+      "Do you want to extend the plan by another 7 days? (y/n): "
+    );
+
+    if (extend.toLowerCase() === "y") {
+      const extraDates: Date[] = [];
+
+      for (let i = 8; i <= 14; i++) {
+        const d = addDays(today, i);
+        extraDates.push(d);
+        await handleDay(rl, data, d);
+      }
+
+      finalDates = finalDates.concat(extraDates);
     }
+
+    save(data);
   }
 
   // =====================
-  // EXTENSION (SEPARATE SAFE FLOW)
-  // =====================
-  const extend = await ask(
-    rl,
-    "Do you want to extend the plan by another 7 days? (y/n): "
-  );
-
-  let finalDates = [...baseDates];
-
-  if (extend.toLowerCase() === "y") {
-    const extraDates: Date[] = [];
-
-    for (let i = 8; i <= 14; i++) {
-      const d = addDays(today, i);
-      extraDates.push(d);
-      await handleDay(rl, data, d);
-    }
-
-    finalDates = finalDates.concat(extraDates);
-  }
-
-  save(data);
-
-  // =====================
-  // OUTPUT (ALWAYS GUARANTEED)
+  // OUTPUT
   // =====================
   console.log("\n📊 CALENDAR\n");
   console.log(
@@ -228,12 +226,12 @@ async function main() {
     let remaining = "-".padStart(11);
 
     const isTuesday = dayName(d) === "Tue";
-    const isPast = toLocalDate(d).getTime() < today.getTime();
-    const isToday = fmt(d) === fmt(today);
+    const isPast = toLocalDate(d).getTime() < toLocalDate(today).getTime();
 
     if (isTuesday && !isPast) {
-      rolling = rolling7(data, finalDates, i).toFixed(1).padStart(11);
-      remaining = (24 - parseFloat(rolling)).toFixed(1).padStart(11);
+      const total = rolling7(data, finalDates, i);
+      rolling = total.toFixed(1).padStart(11);
+      remaining = (24 - total).toFixed(1).padStart(11);
     }
 
     console.log(
