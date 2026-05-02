@@ -67,8 +67,25 @@ function rolling7(data: HoursData, dates: Date[], i: number) {
 function available(data: HoursData, dates: Date[], i: number) {
   const spent = data[fmt(dates[i])] ?? 0;
 
+  let worstCase = 0;
+
+  // Check ALL 7-day windows that include day i
+  for (let start = i - 6; start <= i; start++) {
+    let sum = 0;
+
+    for (let k = 0; k < 7; k++) {
+      const idx = start + k;
+
+      if (idx < 0 || idx >= dates.length) continue;
+
+      sum += data[fmt(dates[idx])] ?? 0;
+    }
+
+    if (sum > worstCase) worstCase = sum;
+  }
+
+  const weekly = Math.max(0, MAX_WEEK - worstCase);
   const daily = Math.max(0, MAX_DAY - spent);
-  const weekly = Math.max(0, MAX_WEEK - rolling7(data, dates, i));
 
   return Math.min(daily, weekly);
 }
